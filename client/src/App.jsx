@@ -50,7 +50,7 @@ function DashboardLayout({ children }) {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <Sidebar />
-      <main className="md:ml-64 pt-16 p-3 sm:p-4 md:p-6 min-h-screen overflow-x-hidden">
+      <main className="md:ml-64 pt-16 p-3 sm:p-4 md:p-4 min-h-screen overflow-x-hidden">
         <PageTransition>{children}</PageTransition>
       </main>
     </div>

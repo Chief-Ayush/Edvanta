@@ -6,6 +6,7 @@ import { Progress } from '../components/ui/progress'
 import { useAuth } from '../hooks/useAuth'
 import { Link, useNavigate } from 'react-router-dom'
 import backEndURL from '../hooks/helper'  // Import the backend URL helper
+import { useEffect } from 'react'
 import {
   Brain,
   Palette,

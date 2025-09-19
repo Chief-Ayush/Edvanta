@@ -1364,8 +1364,8 @@ export function ConversationalTutor() {
                 <div
                   key={mode.id}
                   className={`flex items-center space-x-3 p-2 sm:p-3 rounded-lg cursor-pointer border transition-colors ${selectedMode === mode.id
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:border-primary/50"
+                    ? "border-primary bg-primary/10"
+                    : "border-border hover:border-primary/50"
                     }`}
                   onClick={() => setSelectedMode(mode.id)}
                 >
@@ -1497,16 +1497,16 @@ export function ConversationalTutor() {
                       <div
                         key={message.id}
                         className={`flex ${message.role === "user"
-                            ? "justify-end"
-                            : "justify-start"
+                          ? "justify-end"
+                          : "justify-start"
                           } w-full`}
                       >
                         <div
                           className={`max-w-[95%] sm:max-w-[90%] md:max-w-[80%] rounded-lg p-3 sm:p-4 ${message.role === "user"
-                              ? "bg-primary text-primary-foreground"
-                              : message.role === "system"
-                                ? "bg-muted text-muted-foreground text-xs sm:text-sm"
-                                : "bg-secondary"
+                            ? "bg-primary text-primary-foreground"
+                            : message.role === "system"
+                              ? "bg-muted text-muted-foreground text-xs sm:text-sm"
+                              : "bg-secondary"
                             }`}
                         >
                           {message.role === "user" && message.isVoiceInput && (
@@ -1633,10 +1633,10 @@ export function ConversationalTutor() {
                   }
                   size="icon"
                   className={`h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 rounded-full shadow-md ${micState === MicState.ACTIVE
-                      ? "animate-pulse shadow-red-200"
-                      : micState === MicState.DISABLED
-                        ? "opacity-60 cursor-not-allowed"
-                        : ""
+                    ? "animate-pulse shadow-red-200"
+                    : micState === MicState.DISABLED
+                      ? "opacity-60 cursor-not-allowed"
+                      : ""
                     }`}
                   onClick={handleMicrophoneClick}
                   disabled={micState === MicState.DISABLED || isLoading}

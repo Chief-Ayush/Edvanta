@@ -722,7 +722,7 @@ Please try again in a moment, and I'll be happy to provide a more detailed expla
         </div>
 
         {/* Input Area - Above layer (floating) */}
-        <div className="absolute bottom-0 left-0 right-0 border-t bg-white/95 backdrop-blur-sm p-2 sm:p-3 lg:p-4 pb-4 sm:pb-6 lg:pb-8 shadow-lg z-10">
+        <div className="absolute bottom-0 left-0 right-0 border-t bg-white/95 backdrop-blur-sm p-2 sm:p-3 lg:p-4 pb-4 sm:pb-6 lg:pb-6 shadow-lg z-5">
           <div className="flex gap-2 sm:gap-3">
             <Input
               ref={inputRef}

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useEffect } from 'react'
 import {
   Card,
   CardContent,
@@ -450,8 +451,8 @@ export function ResumeBuilder() {
                     <div
                       key={section.id}
                       className={`flex items-center p-3 rounded-lg cursor-pointer transition-all duration-200 ${activeSection === section.id
-                          ? "bg-blue-50 border border-blue-200"
-                          : "hover:bg-gray-50 border border-transparent"
+                        ? "bg-blue-50 border border-blue-200"
+                        : "hover:bg-gray-50 border border-transparent"
                         }`}
                       onClick={() => setActiveSection(section.id)}
                     >
@@ -676,8 +677,8 @@ export function ResumeBuilder() {
                   <div
                     key={template.id}
                     className={`cursor-pointer group ${selectedTemplate === template.id
-                        ? "ring-2 ring-blue-500"
-                        : ""
+                      ? "ring-2 ring-blue-500"
+                      : ""
                       }`}
                     onClick={() => setSelectedTemplate(template.id)}
                   >
