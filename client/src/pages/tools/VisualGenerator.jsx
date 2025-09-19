@@ -54,6 +54,14 @@ const steps = [
 ];
 
 export function VisualGenerator() {
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }, []);
+
   const { user } = useAuth();
 
   // Core inputs
@@ -240,10 +248,10 @@ export function VisualGenerator() {
     const resourceType = file.type.startsWith("audio")
       ? "video"
       : file.type.startsWith("video")
-      ? "video"
-      : file.type === "application/pdf"
-      ? "raw"
-      : "image";
+        ? "video"
+        : file.type === "application/pdf"
+          ? "raw"
+          : "image";
     const endpoint = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`;
     const res = await fetch(endpoint, { method: "POST", body: form });
     const data = await res.json();
@@ -348,18 +356,16 @@ export function VisualGenerator() {
               return (
                 <div
                   key={step.id}
-                  className={`flex items-center ${
-                    index < steps.length - 1 ? "flex-1" : ""
-                  }`}
+                  className={`flex items-center ${index < steps.length - 1 ? "flex-1" : ""
+                    }`}
                 >
                   <div
-                    className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full text-xs sm:text-sm font-medium transition-colors duration-300 ${
-                      complete
-                        ? "bg-blue-600 text-white"
-                        : active
+                    className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full text-xs sm:text-sm font-medium transition-colors duration-300 ${complete
+                      ? "bg-blue-600 text-white"
+                      : active
                         ? "bg-blue-100 text-blue-700 border border-blue-300"
                         : "bg-gray-200 text-gray-500"
-                    }`}
+                      }`}
                   >
                     {complete ? (
                       <CheckCircle className="h-4 w-4" />
@@ -374,9 +380,8 @@ export function VisualGenerator() {
                       className={`flex-1 h-1 mx-2 sm:mx-4 rounded-full overflow-hidden bg-gray-200`}
                     >
                       <div
-                        className={`h-full transition-all duration-500 ${
-                          index < currentStep ? "bg-blue-600 w-full" : "w-0"
-                        }`}
+                        className={`h-full transition-all duration-500 ${index < currentStep ? "bg-blue-600 w-full" : "w-0"
+                          }`}
                       />
                     </div>
                   )}
@@ -580,8 +585,8 @@ export function VisualGenerator() {
                 {loading
                   ? "Uploading..."
                   : recordedAudioUrl
-                  ? "Process Recording"
-                  : "Process Audio"}
+                    ? "Process Recording"
+                    : "Process Audio"}
               </Button>
             </CardContent>
           </Card>

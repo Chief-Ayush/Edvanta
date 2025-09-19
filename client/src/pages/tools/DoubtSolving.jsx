@@ -526,9 +526,9 @@ Please try again in a moment, and I'll be happy to provide a more detailed expla
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden relative">
       {/* Header */}
-      <div className="border-b bg-white p-2 sm:p-3 lg:p-4 flex-shrink-0">
+      <div className="border-b bg-white p-2 sm:p-3 lg:p-4 flex-shrink-0 relative z-20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-blue-600 flex-shrink-0" />
@@ -576,9 +576,9 @@ Please try again in a moment, and I'll be happy to provide a more detailed expla
       </div>
 
       {/* Main Chat Container */}
-      <div className="flex-1 flex flex-col min-h-0">
-        {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 space-y-2 sm:space-y-3 lg:space-y-4 bg-gray-50">
+      <div className="flex-1 flex flex-col min-h-0 relative">
+        {/* Messages Area - Below layer */}
+        <div className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 pb-20 sm:pb-24 lg:pb-28 space-y-2 sm:space-y-3 lg:space-y-4 bg-gray-50">
           {messages.length === 0 && (
             <div className="text-center py-4 sm:py-6 lg:py-8 px-4">
               <MessageSquare className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 mx-auto text-gray-400 mb-3 sm:mb-4" />
@@ -721,8 +721,8 @@ Please try again in a moment, and I'll be happy to provide a more detailed expla
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
-        <div className="border-t bg-white p-2 sm:p-3 lg:p-4 flex-shrink-0 shadow-lg">
+        {/* Input Area - Above layer (floating) */}
+        <div className="absolute bottom-0 left-0 right-0 border-t bg-white/95 backdrop-blur-sm p-2 sm:p-3 lg:p-4 pb-4 sm:pb-6 lg:pb-8 shadow-lg z-10">
           <div className="flex gap-2 sm:gap-3">
             <Input
               ref={inputRef}

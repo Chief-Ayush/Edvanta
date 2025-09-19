@@ -63,6 +63,14 @@ export function ResumeBuilder() {
   const [analyzeError, setAnalyzeError] = useState("");
   const [analyzeResult, setAnalyzeResult] = useState(null);
 
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }, []);
+
   const templates = [
     {
       id: "modern",
@@ -338,12 +346,11 @@ export function ResumeBuilder() {
                           <circle
                             className="text-blue-600"
                             strokeWidth="8"
-                            strokeDasharray={`${
-                              Math.min(
-                                100,
-                                Math.max(0, analyzeResult.match_score ?? 0)
-                              ) * 2.76
-                            } 276`}
+                            strokeDasharray={`${Math.min(
+                              100,
+                              Math.max(0, analyzeResult.match_score ?? 0)
+                            ) * 2.76
+                              } 276`}
                             strokeLinecap="round"
                             stroke="currentColor"
                             fill="transparent"
@@ -394,10 +401,10 @@ export function ResumeBuilder() {
                       ))}
                       {(!analyzeResult.strengths ||
                         analyzeResult.strengths.length === 0) && (
-                        <p className="text-xs text-gray-500">
-                          No strengths identified.
-                        </p>
-                      )}
+                          <p className="text-xs text-gray-500">
+                            No strengths identified.
+                          </p>
+                        )}
                     </div>
                   </div>
                   <div className="border rounded-lg p-4">
@@ -413,10 +420,10 @@ export function ResumeBuilder() {
                       ))}
                       {(!analyzeResult.improvements ||
                         analyzeResult.improvements.length === 0) && (
-                        <p className="text-xs text-gray-500">
-                          No improvement suggestions.
-                        </p>
-                      )}
+                          <p className="text-xs text-gray-500">
+                            No improvement suggestions.
+                          </p>
+                        )}
                     </div>
                   </div>
                 </div>
@@ -442,17 +449,15 @@ export function ResumeBuilder() {
                   {sections.map((section) => (
                     <div
                       key={section.id}
-                      className={`flex items-center p-3 rounded-lg cursor-pointer transition-all duration-200 ${
-                        activeSection === section.id
+                      className={`flex items-center p-3 rounded-lg cursor-pointer transition-all duration-200 ${activeSection === section.id
                           ? "bg-blue-50 border border-blue-200"
                           : "hover:bg-gray-50 border border-transparent"
-                      }`}
+                        }`}
                       onClick={() => setActiveSection(section.id)}
                     >
                       <section.icon
-                        className={`h-4 w-4 mr-3 ${
-                          section.completed ? "text-green-600" : "text-gray-400"
-                        }`}
+                        className={`h-4 w-4 mr-3 ${section.completed ? "text-green-600" : "text-gray-400"
+                          }`}
                       />
                       <span className="flex-1 text-sm font-medium">
                         {section.name}
@@ -670,11 +675,10 @@ export function ResumeBuilder() {
                 {templates.map((template) => (
                   <div
                     key={template.id}
-                    className={`cursor-pointer group ${
-                      selectedTemplate === template.id
+                    className={`cursor-pointer group ${selectedTemplate === template.id
                         ? "ring-2 ring-blue-500"
                         : ""
-                    }`}
+                      }`}
                     onClick={() => setSelectedTemplate(template.id)}
                   >
                     <Card className="h-full hover:shadow-lg transition-shadow duration-200">

@@ -281,6 +281,14 @@ export function ConversationalTutor() {
     };
   }, []); // Empty dependency array means this only runs once on mount
 
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }, []);
+
   // Secondary useEffect to check for auth state changes
   useEffect(() => {
     if (user?.email && !authLoading && !isSessionActive && !sessionId) {
@@ -1355,11 +1363,10 @@ export function ConversationalTutor() {
               {modes.map((mode) => (
                 <div
                   key={mode.id}
-                  className={`flex items-center space-x-3 p-2 sm:p-3 rounded-lg cursor-pointer border transition-colors ${
-                    selectedMode === mode.id
+                  className={`flex items-center space-x-3 p-2 sm:p-3 rounded-lg cursor-pointer border transition-colors ${selectedMode === mode.id
                       ? "border-primary bg-primary/10"
                       : "border-border hover:border-primary/50"
-                  }`}
+                    }`}
                   onClick={() => setSelectedMode(mode.id)}
                 >
                   <div className="bg-primary/20 p-2 rounded-full flex-shrink-0">
@@ -1489,20 +1496,18 @@ export function ConversationalTutor() {
                     {messages.map((message) => (
                       <div
                         key={message.id}
-                        className={`flex ${
-                          message.role === "user"
+                        className={`flex ${message.role === "user"
                             ? "justify-end"
                             : "justify-start"
-                        } w-full`}
+                          } w-full`}
                       >
                         <div
-                          className={`max-w-[95%] sm:max-w-[90%] md:max-w-[80%] rounded-lg p-3 sm:p-4 ${
-                            message.role === "user"
+                          className={`max-w-[95%] sm:max-w-[90%] md:max-w-[80%] rounded-lg p-3 sm:p-4 ${message.role === "user"
                               ? "bg-primary text-primary-foreground"
                               : message.role === "system"
-                              ? "bg-muted text-muted-foreground text-xs sm:text-sm"
-                              : "bg-secondary"
-                          }`}
+                                ? "bg-muted text-muted-foreground text-xs sm:text-sm"
+                                : "bg-secondary"
+                            }`}
                         >
                           {message.role === "user" && message.isVoiceInput && (
                             <div className="flex items-center justify-end text-xs text-primary-foreground/70 m-1 sm:m-2">
@@ -1530,7 +1535,7 @@ export function ConversationalTutor() {
                             <div className="flex flex-wrap justify-end mt-2 gap-1 sm:gap-2">
                               {isVoiceEnabled &&
                                 (isSpeaking &&
-                                currentSpeakingMessageId === message.id ? (
+                                  currentSpeakingMessageId === message.id ? (
                                   <Button
                                     variant="destructive"
                                     size="sm"
@@ -1623,17 +1628,16 @@ export function ConversationalTutor() {
                     micState === MicState.ACTIVE
                       ? "destructive"
                       : micState === MicState.DISABLED
-                      ? "outline"
-                      : "default"
+                        ? "outline"
+                        : "default"
                   }
                   size="icon"
-                  className={`h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 rounded-full shadow-md ${
-                    micState === MicState.ACTIVE
+                  className={`h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 rounded-full shadow-md ${micState === MicState.ACTIVE
                       ? "animate-pulse shadow-red-200"
                       : micState === MicState.DISABLED
-                      ? "opacity-60 cursor-not-allowed"
-                      : ""
-                  }`}
+                        ? "opacity-60 cursor-not-allowed"
+                        : ""
+                    }`}
                   onClick={handleMicrophoneClick}
                   disabled={micState === MicState.DISABLED || isLoading}
                 >

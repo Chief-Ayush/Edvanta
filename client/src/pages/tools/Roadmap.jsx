@@ -116,6 +116,14 @@ export function Roadmap() {
     }
   };
 
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }, []);
+
   // Function to generate a custom roadmap using the backend API
   const generateCustomRoadmap = async () => {
     if (!customGoal || !customBackground) {

@@ -519,6 +519,14 @@ export function Dashboard() {
     </Card>
   ));
 
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }, []);
+
   return (
     <div className="space-y-4 sm:space-y-6 p-2 sm:p-0">
       {/* Welcome Header */}
