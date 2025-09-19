@@ -10,6 +10,7 @@ import { Navbar } from "./components/Layout/Navbar";
 import { Sidebar } from "./components/Layout/Sidebar";
 import { useAuth } from "./hooks/useAuth";
 import { PageTransition } from "./components/ui/PageTransition";
+import { ScreenFatigueReminder } from "./components/ui/ScreenFatigueReminder";
 
 // Pages
 import Home from "./pages/Home";
@@ -208,6 +209,7 @@ function App() {
   return (
     <Router>
       <AppRoutes />
+      <ScreenFatigueReminder />
     </Router>
   );
 }
