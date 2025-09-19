@@ -36,6 +36,7 @@ def create_app() -> Flask:
     from .routes.roadmap import roadmap_bp
     from .routes.resume import resume_bp
     from .routes.email import email_bp
+    from .routes.translate import translate_bp
 
     # Register blueprints with the app
     app.register_blueprint(visual_bp)
@@ -45,6 +46,7 @@ def create_app() -> Flask:
     app.register_blueprint(roadmap_bp)
     app.register_blueprint(resume_bp)
     app.register_blueprint(email_bp)
+    app.register_blueprint(translate_bp)
 
     @app.route("/", methods=["GET"])  # Simple health check
     def health():  # pragma: no cover - trivial

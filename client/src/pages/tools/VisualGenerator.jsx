@@ -85,6 +85,9 @@ export function VisualGenerator() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [historyVideos, setHistoryVideos] = useState([]);
+  const [activeJob, setActiveJob] = useState(null); // {job_id,status,label,mode}
+  const pollingRef = useRef(null);
+  const restoredRef = useRef(false);
 
   // Derived step index from progress (simple thresholds)
   const currentStep = (() => {
@@ -263,21 +266,25 @@ export function VisualGenerator() {
   const handleTextSubmit = async () => {
     if (!content.trim()) return;
     setLoading(true);
-    setProgress(10);
+    setProgress(5);
+    localStorage.setItem("visual_active_job_progress", "5");
     try {
-      const { url } = await postJSON("/api/visual/text-to-video", {
+      const res = await postJSON("/api/visual/job/text", {
         text: content,
+        user_email: user?.email,
+        label: content.slice(0, 40),
       });
-      setVideoUrl(url);
-      setProgress(100);
-      await saveVideoRecord({
-        sourceType: "text",
-        inputSample: content.slice(0, 180),
-        videoUrl: url,
-      });
+      const job = {
+        job_id: res.job_id,
+        status: res.status,
+        mode: "text",
+        label: content.slice(0, 40),
+        created_at: Date.now(),
+      };
+      setActiveJob(job);
+      localStorage.setItem("visual_active_job", JSON.stringify(job));
     } catch (e) {
       setProgress(0);
-    } finally {
       setLoading(false);
     }
   };
@@ -285,22 +292,25 @@ export function VisualGenerator() {
     if (!pdfFile) return;
     setLoading(true);
     setProgress(5);
+    localStorage.setItem("visual_active_job_progress", "5");
     try {
       const pdfUrl = await uploadToCloudinary(pdfFile);
-      const { url } = await postJSON("/api/visual/pdf-url-to-video", {
+      const res = await postJSON("/api/visual/job/pdf", {
         pdf_url: pdfUrl,
+        user_email: user?.email,
+        label: pdfFile.name,
       });
-      setVideoUrl(url);
-      setProgress(100);
-      await saveVideoRecord({
-        sourceType: "pdf",
-        inputSample: pdfFile.name,
-        videoUrl: url,
-        sourceFileName: pdfFile.name,
-      });
+      const job = {
+        job_id: res.job_id,
+        status: res.status,
+        mode: "pdf",
+        label: pdfFile.name,
+        created_at: Date.now(),
+      };
+      setActiveJob(job);
+      localStorage.setItem("visual_active_job", JSON.stringify(job));
     } catch {
       setProgress(0);
-    } finally {
       setLoading(false);
     }
   };
@@ -308,25 +318,138 @@ export function VisualGenerator() {
     if (!audioFile) return;
     setLoading(true);
     setProgress(5);
+    localStorage.setItem("visual_active_job_progress", "5");
     try {
       const audUrl = await uploadToCloudinary(audioFile);
-      const { url } = await postJSON("/api/visual/audio-url-to-video", {
+      const res = await postJSON("/api/visual/job/audio", {
         audio_url: audUrl,
+        user_email: user?.email,
+        label: audioFile.name,
       });
-      setVideoUrl(url);
-      setProgress(100);
-      await saveVideoRecord({
-        sourceType: recordedAudioUrl ? "recorded-audio" : "audio-file",
-        inputSample: audioFile.name,
-        videoUrl: url,
-        sourceFileName: audioFile.name,
-      });
+      const job = {
+        job_id: res.job_id,
+        status: res.status,
+        mode: "audio",
+        label: audioFile.name,
+        created_at: Date.now(),
+      };
+      setActiveJob(job);
+      localStorage.setItem("visual_active_job", JSON.stringify(job));
     } catch {
       setProgress(0);
-    } finally {
       setLoading(false);
     }
   };
+
+  // Polling for active job
+  // Restore job + progress on mount
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    try {
+      const storedJob = localStorage.getItem("visual_active_job");
+      const storedProg = localStorage.getItem("visual_active_job_progress");
+      if (storedProg) {
+        const val = parseInt(storedProg);
+        if (!isNaN(val)) setProgress(val);
+      }
+      if (storedJob) {
+        const parsed = JSON.parse(storedJob);
+        setActiveJob(parsed);
+        setLoading(true); // indicate ongoing generation
+        // Immediately fetch status once for fast sync
+        fetch(`${backEndURL}/api/visual/job/${parsed.job_id}`)
+          .then((r) => (r.ok ? r.json() : Promise.reject()))
+          .then((js) => {
+            if (js.status === "completed") {
+              setProgress(100);
+              setVideoUrl(js.url);
+              setLoading(false);
+              saveVideoRecord({
+                sourceType: parsed.mode,
+                inputSample: parsed.label,
+                videoUrl: js.url,
+              });
+              localStorage.removeItem("visual_active_job");
+              localStorage.removeItem("visual_active_job_progress");
+              setActiveJob(null);
+            } else if (js.status === "failed") {
+              setError(js.error || "Generation failed");
+              setLoading(false);
+              setProgress(0);
+              localStorage.removeItem("visual_active_job");
+              localStorage.removeItem("visual_active_job_progress");
+              setActiveJob(null);
+            } else if (js.status === "running") {
+              if (progress < 15) setProgress(15);
+            }
+          })
+          .catch(() => {});
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (!activeJob) return;
+    if (pollingRef.current) return; // already polling
+    pollingRef.current = setInterval(async () => {
+      try {
+        const r = await fetch(
+          `${backEndURL}/api/visual/job/${activeJob.job_id}`
+        );
+        if (!r.ok) throw new Error("status");
+        const js = await r.json();
+        if (js.status === "running") {
+          setProgress((p) => {
+            const next = p < 85 ? p + 5 : p;
+            localStorage.setItem("visual_active_job_progress", String(next));
+            return next;
+          });
+        } else if (js.status === "completed") {
+          setProgress(100);
+          setVideoUrl(js.url);
+          setLoading(false);
+          const meta = {
+            sourceType: activeJob.mode,
+            inputSample: activeJob.label,
+            videoUrl: js.url,
+          };
+          await saveVideoRecord(meta);
+          localStorage.removeItem("visual_active_job");
+          localStorage.removeItem("visual_active_job_progress");
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+          setActiveJob(null);
+        } else if (js.status === "failed") {
+          setError(js.error || "Generation failed");
+          setLoading(false);
+          setProgress(0);
+          localStorage.removeItem("visual_active_job");
+          localStorage.removeItem("visual_active_job_progress");
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+          setActiveJob(null);
+        }
+      } catch (e) {
+        // ignore temporary errors
+      }
+    }, 5000);
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [activeJob]);
+
+  // Keep progress mirrored while a job is active (covers manual refresh between poll ticks)
+  useEffect(() => {
+    if (activeJob && progress > 0 && progress < 100) {
+      try {
+        localStorage.setItem("visual_active_job_progress", String(progress));
+      } catch {}
+    }
+  }, [progress, activeJob]);
 
   return (
     <div className="space-y-6 p-4">
@@ -349,6 +472,14 @@ export function VisualGenerator() {
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 sm:px-6">
+          {activeJob && (
+            <div className="mb-3 text-[11px] flex items-center justify-between bg-blue-50 border border-blue-200 px-2 py-1 rounded">
+              <span className="truncate">Generating: {activeJob.label}</span>
+              <span className="text-blue-600 font-medium">
+                {activeJob.status === "queued" ? "Queued" : "In Progress"}
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-between mb-4 overflow-x-auto">
             {steps.map((step, index) => {
               const active = index === currentStep;

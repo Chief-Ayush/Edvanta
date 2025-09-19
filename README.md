@@ -35,6 +35,7 @@ Backend endpoints are placeholders with clear comments indicating where integrat
 | AI Tutor          | Conversational guidance + (future) TTS | POST `/api/tutor/ask`                                |
 | Roadmap           | Learning path generation               | POST `/api/roadmap/generate`                         |
 | Resume            | Upload + JD analysis                   | POST `/api/resume/upload`, `/api/resume/analyze`     |
+| Translation       | Language translation (multi-text)      | POST `/api/translate`                                |
 
 ## Repository Structure
 
@@ -135,6 +136,7 @@ All endpoints currently return JSON with a basic placeholder `message`. Logic wi
 | POST | /api/roadmap/generate | Build learning roadmap |
 | POST | /api/resume/upload | Upload resume (Cloudinary) |
 | POST | /api/resume/analyze | Analyze resume vs job description |
+| POST | /api/translate | Translate text(s) to a target language |
 
 ## Planned Integrations
 
@@ -155,9 +157,8 @@ All endpoints currently return JSON with a basic placeholder `message`. Logic wi
 ## Contributors
 
 | [![](https://github.com/parthnarkar.png?size=100)](https://github.com/parthnarkar) | [![](https://github.com/tanish-jain-225.png?size=100)](https://github.com/tanish-jain-225) | [![](https://github.com/pankaj0695.png?size=100)](https://github.com/pankaj0695) | [![](https://github.com/Chief-Ayush.png?size=100)](https://github.com/Chief-Ayush) |
-|:--:|:--:|:--:|:--:|
-| [**Parth Narkar**](https://github.com/parthnarkar) | [**Tanish Sanghvi**](https://github.com/tanish-jain-225) | [**Pankaj Gupta**](https://github.com/pankaj0695) | [**Ayush Attarde**](https://github.com/Chief-Ayush) |
-
+| :--------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------: |
+|                 [**Parth Narkar**](https://github.com/parthnarkar)                 |                  [**Tanish Sanghvi**](https://github.com/tanish-jain-225)                  |                [**Pankaj Gupta**](https://github.com/pankaj0695)                 |                [**Ayush Attarde**](https://github.com/Chief-Ayush)                 |
 
 ## Contributing
 
