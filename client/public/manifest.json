@@ -1,0 +1,88 @@
+{
+  "name": "Edvanta - AI-Powered Learning Platform",
+  "short_name": "Edvanta",
+  "description": "AI-powered learning platform with offline capabilities for personalized learning, quizzes, roadmaps, and career tools",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["education", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/edvanta-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/edvanta-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/edvanta-logo.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/edvanta-logo.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/edvanta-logo.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Edvanta Mobile Dashboard"
+    },
+    {
+      "src": "/edvanta-logo.png",
+      "sizes": "428x926",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Edvanta Learning Tools"
+    },
+    {
+      "src": "/edvanta-logo.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Edvanta Desktop Experience"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your learning progress",
+      "url": "/dashboard",
+      "icons": [{ "src": "/edvanta-logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Quizzes",
+      "short_name": "Quizzes",
+      "description": "Take practice quizzes",
+      "url": "/tools/quizzes",
+      "icons": [{ "src": "/edvanta-logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Offline Mode",
+      "short_name": "Offline",
+      "description": "Access offline content",
+      "url": "/offline-dashboard",
+      "icons": [{ "src": "/edvanta-logo.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

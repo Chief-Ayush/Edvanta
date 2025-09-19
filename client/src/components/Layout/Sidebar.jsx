@@ -10,7 +10,9 @@ import {
   MapPin,
   FileText,
   Trophy,
-  Settings
+  Settings,
+  Wifi,
+  WifiOff
 } from 'lucide-react'
 
 const navigation = [
@@ -21,6 +23,7 @@ const navigation = [
   { name: 'Voice Tutor', href: '/tools/conversational-tutor', icon: Mic },
   { name: 'Roadmap', href: '/tools/roadmap', icon: MapPin },
   { name: 'Resume Builder', href: '/tools/resume-builder', icon: FileText },
+  { name: 'Offline Mode', href: '/offline-dashboard', icon: WifiOff, badge: 'PWA' },
 ]
 
 export function Sidebar({ className }) {
@@ -51,6 +54,11 @@ export function Sidebar({ className }) {
                   isActive ? "text-primary" : "text-gray-500 group-hover:text-primary"
                 )} />
                 <span className="truncate">{item.name}</span>
+                {item.badge && (
+                  <span className="ml-auto inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                    {item.badge}
+                  </span>
+                )}
               </Link>
             )
           })}

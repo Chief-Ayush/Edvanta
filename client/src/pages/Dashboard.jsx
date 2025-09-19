@@ -142,7 +142,9 @@ export function Dashboard() {
   const [quizHistory, setQuizHistory] = useState([]);
   const [userStats, setUserStats] = useState({
     totalLearningHours: 0,
-    quizzesTaken: 0
+    quizzesTaken: 0,
+    activeRoadmaps: 0,
+    skillsLearning: 0
   });
   const [isLoadingStats, setIsLoadingStats] = useState(false);
 
@@ -209,9 +211,9 @@ export function Dashboard() {
   // Fetch user data when component mounts or user changes
   useEffect(() => {
     if (user?.email) {
-      fetchUserRoadmaps();
-      fetchUserStats();
-      fetchQuizHistory();
+      fetchUserRoadmaps(); // For UI display of roadmap details
+      fetchUserStats(); // For real-time stats from API
+      fetchQuizHistory(); // For quiz average calculation in UI
     }
   }, [user]);
 
@@ -275,9 +277,12 @@ export function Dashboard() {
 
       if (response.ok) {
         const stats = await response.json();
+        console.log('API Stats loaded:', stats); // Debug log
         setUserStats({
           totalLearningHours: stats.total_learning_minutes || 0, // Keep as minutes for precise calculation
-          quizzesTaken: stats.quizzes_taken || 0
+          quizzesTaken: stats.quizzes_taken || 0,
+          activeRoadmaps: stats.active_roadmaps || 0,
+          skillsLearning: stats.skills_learning || 0
         });
       }
     } catch (error) {
@@ -422,47 +427,16 @@ export function Dashboard() {
     });
   };
 
-  // Calculate dynamic stats from roadmap data and quiz history
+  // Calculate dynamic stats from API data (real-time)
   const calculateDynamicStats = () => {
-    if (!savedRoadmaps.length && !quizHistory.length) {
-      return {
-        totalRoadmaps: 0,
-        totalSkills: 0,
-        completedSkills: 0,
-        quizzesTaken: 0,
-        learningMinutes: 0, // Changed to minutes for precise display
-        activeWeeks: 0
-      };
-    }
-
-    // Calculate total skills across all roadmaps
-    const totalSkills = savedRoadmaps.reduce((sum, roadmap) =>
-      sum + (roadmap.data?.nodes?.length - 1 || 0), 0
-    );
-
-    // Calculate estimated completed skills based on time elapsed
-    const completedSkills = savedRoadmaps.reduce((sum, roadmap) => {
-      const daysSinceStart = Math.floor(
-        (new Date() - new Date(roadmap.dateCreated)) / (1000 * 60 * 60 * 24)
-      );
-      const totalDays = (roadmap.duration || 12) * 7; // weeks to days
-      const progressRatio = Math.min(daysSinceStart / totalDays, 1);
-      const nodesCount = roadmap.data?.nodes?.length - 1 || 0;
-      return sum + Math.floor(nodesCount * progressRatio);
-    }, 0);
-
-    // Calculate active weeks (total duration of all roadmaps)
-    const activeWeeks = savedRoadmaps.reduce((sum, roadmap) =>
-      sum + (roadmap.duration || 0), 0
-    );
-
+    // Use real-time data from API instead of local arrays
     return {
-      totalRoadmaps: savedRoadmaps.length,
-      totalSkills,
-      completedSkills,
-      quizzesTaken: quizHistory.length, // Real count from quiz history
-      learningMinutes: userStats.totalLearningHours, // This is actually minutes from backend
-      activeWeeks
+      totalRoadmaps: userStats.activeRoadmaps, // From API
+      totalSkills: userStats.skillsLearning, // From API (unique skills)
+      completedSkills: Math.floor(userStats.skillsLearning * 0.3), // Estimate 30% completion
+      quizzesTaken: userStats.quizzesTaken, // From API
+      learningMinutes: userStats.totalLearningHours, // From API (in minutes)
+      activeWeeks: userStats.activeRoadmaps * 8 // Estimate 8 weeks per roadmap
     };
   };
 
@@ -550,7 +524,7 @@ export function Dashboard() {
 
       {/* Dynamic Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-        {isLoadingRoadmaps || isLoadingStats ? (
+        {isLoadingStats ? (
           statsLoadingSkeleton
         ) : !user ? (
           // Not signed in - show placeholder stats
@@ -807,7 +781,7 @@ export function Dashboard() {
                           </div>
                           <span className="text-xs font-medium text-green-700">Total Roadmaps</span>
                         </div>
-                        <p className="text-lg font-bold text-green-800">{savedRoadmaps.length}</p>
+                        <p className="text-lg font-bold text-green-800">{dynamicStats.totalRoadmaps}</p>
                       </div>
 
                       <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-3 rounded-lg border border-purple-100">
