@@ -49,13 +49,10 @@ function DashboardLayout({ children }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="flex pt-16">
-        {/* Added pt-16 to account for fixed navbar height */}
-        <Sidebar />
-        <main className="flex-1 p-3 sm:p-4 md:p-6 min-h-[calc(100vh-4rem)] overflow-x-hidden">
-          <PageTransition>{children}</PageTransition>
-        </main>
-      </div>
+      <Sidebar />
+      <main className="md:ml-64 pt-16 p-3 sm:p-4 md:p-6 min-h-screen overflow-x-hidden">
+        <PageTransition>{children}</PageTransition>
+      </main>
     </div>
   );
 }
@@ -112,12 +109,12 @@ function AppRoutes() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      <div className="flex-1">
+      <div className="flex-1 pt-16">
         <Routes>
           {/* Public Routes */}
           <Route
             path="/"
-            element={<Home />}
+            element={<PageTransition><Home /></PageTransition>}
           />
           <Route
             path="/auth/login"
