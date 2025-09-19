@@ -27,7 +27,8 @@ def connect_to_mongodb():
     try:
         connection_string = Config.MONGODB_URI
         db_name = Config.MONGODB_DB_NAME
-        dynamic_collection = Config.MONGODB_ROADMAP_COLLECTION
+        # Provide default collection name if not configured to avoid None indexing
+        dynamic_collection = Config.MONGODB_ROADMAP_COLLECTION or "roadmaps"
 
         if not connection_string or not db_name:
             return None, None, None
@@ -41,7 +42,7 @@ def connect_to_mongodb():
         collection_name = dynamic_collection
 
         return client, db, collection_name
-    except Exception as e:
+    except Exception:
         return None, None, None
 
 
@@ -140,26 +141,43 @@ def generate_roadmap():
         # Parse the JSON to ensure it's valid
         roadmap_data = json.loads(roadmap_json)
 
-        # Save the roadmap to MongoDB
-        try:
-            roadmap_collection = db[collection_name]
-            # Create the document to save
-            roadmap_document = {
-                "id": str(uuid.uuid4()),
-                "user_email": user_email,
-                "title": goal,
-                "description": background,
-                "duration_weeks": duration_weeks,
-                "created_at": datetime.utcnow(),
-                "data": roadmap_data
+        # Prepare document used for DB or in-memory fallback
+        roadmap_document = {
+            "id": str(uuid.uuid4()),
+            "user_email": user_email,
+            "title": goal,
+            "description": background,
+            "duration_weeks": duration_weeks,
+            "created_at": datetime.utcnow(),
+            "data": roadmap_data
+        }
+
+        # Attempt DB save only if connection & collection name valid
+        if db and collection_name:
+            try:
+                roadmap_collection = db[collection_name]
+                roadmap_collection.insert_one(roadmap_document)
+                return jsonify({"roadmap": roadmap_data})
+            except Exception as db_error:
+                # Fallback to in-memory and still return 200 with warning
+                _in_memory_roadmaps[roadmap_document["id"]] = {
+                    **roadmap_document,
+                    "created_at": roadmap_document["created_at"].isoformat()
+                }
+                return jsonify({
+                    "roadmap": roadmap_data,
+                    "warning": f"Database save failed, stored in memory fallback: {str(db_error)}"
+                }), 200
+        else:
+            # No DB configured — store in memory
+            _in_memory_roadmaps[roadmap_document["id"]] = {
+                **roadmap_document,
+                "created_at": roadmap_document["created_at"].isoformat()
             }
-
-            # Insert into MongoDB
-            roadmap_collection.insert_one(roadmap_document)
-        except Exception as db_error:
-            return jsonify({"error": f"Failed to save roadmap to database: {str(db_error)}"}), 500
-
-        return jsonify({"roadmap": roadmap_data})
+            return jsonify({
+                "roadmap": roadmap_data,
+                "note": "MongoDB not configured; using in-memory storage"
+            }), 200
     except Exception as e:
         return jsonify({"error": f"Roadmap generation failed: {str(e)}"}), 500
 
@@ -175,32 +193,22 @@ def get_user_roadmaps():
     global client, db, collection_name
     if db is None:
         client, db, collection_name = connect_to_mongodb()
-        if db is None:
-            return jsonify({"error": "Database connection is not available"}), 503
+        # If still unavailable, proceed with in-memory fallback (do not 503)
 
     user_email = request.args.get("user_email")
     if not user_email:
         return jsonify({"error": "Missing user_email parameter"}), 400
 
     try:
-        # If DB is available, read from MongoDB
-        if db:
+        if db and collection_name:
             roadmap_collection = db[collection_name]
-
-            # Find all roadmaps for this user, sorted by creation date (newest first)
-            roadmaps_cursor = roadmap_collection.find(
-                {"user_email": user_email}).sort("created_at", -1)
-
-            # Convert to list and serialize ObjectId
+            roadmaps_cursor = roadmap_collection.find({"user_email": user_email}).sort("created_at", -1)
             roadmaps = []
             for roadmap in roadmaps_cursor:
-                # Convert ObjectId to string for JSON serialization
                 roadmap["_id"] = str(roadmap["_id"])
                 roadmaps.append(roadmap)
-
             return jsonify(roadmaps)
-
-        # Fall back to in-memory store
+        # Fallback to in-memory
         user_roadmaps = [r for r in _in_memory_roadmaps.values() if r.get("user_email") == user_email]
         return jsonify(user_roadmaps)
     except Exception as e:
@@ -228,7 +236,7 @@ def get_roadmap_by_id(roadmap_id):
 
     try:
         # If DB is available, operate against MongoDB
-        if db:
+        if db and collection_name:
             roadmap_collection = db[collection_name]
 
             # Check if roadmap exists and verify ownership
