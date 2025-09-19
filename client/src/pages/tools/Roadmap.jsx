@@ -52,7 +52,7 @@ export function Roadmap() {
   const [error, setError] = useState(null);
   const [selectedRoadmap, setSelectedRoadmap] = useState(null);
   const [showRoadmapModal, setShowRoadmapModal] = useState(false);
-
+  const [emailStatus, setEmailStatus] = useState(null); // {state: 'sending'|'sent'|'error', message: string}
 
   // Fetch user's roadmaps when component mounts or user changes
   useEffect(() => {
@@ -90,9 +90,9 @@ export function Roadmap() {
         data: roadmap.data,
         skills: roadmap.data.nodes
           ? roadmap.data.nodes
-            .filter((node) => node.id !== "start")
-            .slice(0, 3)
-            .map((node) => node.title)
+              .filter((node) => node.id !== "start")
+              .slice(0, 3)
+              .map((node) => node.title)
           : [],
       }));
 
@@ -102,7 +102,7 @@ export function Roadmap() {
 
       // If fetch completed too quickly, wait until minimum loading time is reached
       if (timeElapsed < minimumLoadingTime) {
-        await new Promise(resolve =>
+        await new Promise((resolve) =>
           setTimeout(resolve, minimumLoadingTime - timeElapsed)
         );
       }
@@ -171,6 +171,80 @@ export function Roadmap() {
       setCustomGoal("");
       setCustomBackground("");
       setCustomDuration(""); // Reset to default duration
+
+      // Fire email (best-effort) if backend didn't already send or to ensure delivery
+      if (user?.email && parsedRoadmap) {
+        try {
+          setEmailStatus({
+            state: "sending",
+            message: "Sending roadmap to your email...",
+          });
+          const overviewSentence =
+            parsedRoadmap.description?.slice(0, 160) ||
+            "Your personalized roadmap is ready.";
+          const milestoneCount = Array.isArray(parsedRoadmap.data?.nodes)
+            ? parsedRoadmap.data.nodes.length - 1
+            : 0;
+          // Build HTML version (simple responsive inline style)
+          const milestoneList = (parsedRoadmap.data?.nodes || [])
+            .filter((n) => n.id !== "start")
+            .slice(0, 6)
+            .map(
+              (n) =>
+                `<li style=\"margin-bottom:4px;\"><strong>${n.title}</strong>${
+                  n.recommended_weeks ? ` — ${n.recommended_weeks} wk` : ""
+                }</li>`
+            )
+            .join("");
+          const htmlBody = `<!DOCTYPE html><html><head><meta charset=\"utf-8\" /><title>Roadmap</title></head><body style=\"font-family:Arial,Helvetica,sans-serif;margin:0;padding:0;background:#f6f8fb;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f6f8fb;padding:24px;\"><tr><td><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"max-width:640px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5eaf0;\"><tr><td style=\"padding:24px 24px 16px 24px;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#ffffff;\"><h1 style=\"margin:0;font-size:20px;font-weight:600;\">Your Roadmap: ${customGoal}</h1><p style=\"margin:8px 0 0 0;font-size:13px;opacity:.9;\">Generated for ${
+            user.email
+          }</p></td></tr><tr><td style=\"padding:24px;\"><p style=\"font-size:14px;color:#111827;margin:0 0 12px 0;\">${overviewSentence}</p><p style=\"font-size:13px;color:#374151;margin:0 0 16px 0;\"><strong>Milestones:</strong> ${milestoneCount}</p>${
+            milestoneList
+              ? `<div style=\"margin:0 0 20px 0;\"><p style=\"font-size:13px;margin:0 0 6px 0;color:#111827;font-weight:600;\">Preview (first ${Math.min(
+                  6,
+                  Math.max(0, milestoneCount)
+                )} milestones)</p><ul style=\"padding-left:18px;margin:6px 0 0 0;font-size:13px;color:#374151;line-height:1.4;\">${milestoneList}</ul></div>`
+              : ""
+          }<table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\"><tr><td><a href=\"${
+            window.location.origin
+          }/tools/roadmap\" style=\"display:inline-block;background:#3b82f6;color:#ffffff;text-decoration:none;font-size:14px;padding:10px 18px;border-radius:6px;font-weight:600;\">Open in App</a></td></tr></table><p style=\"font-size:11px;color:#6b7280;margin:24px 0 0 0;\">You are receiving this because you generated a roadmap in Edvanta. If you did not request this, you can ignore this email.</p></td></tr><tr><td style=\"background:#f1f5f9;padding:16px;text-align:center;\"><p style=\"margin:0;font-size:11px;color:#64748b;\">&copy; ${new Date().getFullYear()} Edvanta</p></td></tr></table></td></tr></table></body></html>`;
+          await fetch(`${backEndURL}/api/email/send`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to: user.email,
+              subject: `Your Roadmap: ${customGoal}`,
+              body: [
+                `Hi ${user.email},`,
+                "",
+                `Your roadmap for: ${customGoal}`,
+                `Milestones: ${milestoneCount}`,
+                "",
+                overviewSentence,
+                "",
+                "Return to the app to view full details.",
+                "",
+                "— Edvanta",
+              ].join("\n"),
+              html_body: htmlBody,
+            }),
+          }).then(async (r) => {
+            if (!r.ok) {
+              const ej = await r.json().catch(() => ({}));
+              throw new Error(ej.error || "Email failed");
+            }
+            setEmailStatus({
+              state: "sent",
+              message: "Roadmap emailed successfully.",
+            });
+          });
+        } catch (mailErr) {
+          setEmailStatus({
+            state: "error",
+            message: mailErr.message || "Failed to send roadmap email.",
+          });
+        }
+      }
     } catch (err) {
       console.error("Error generating roadmap:", err);
       setError(
@@ -217,9 +291,9 @@ export function Roadmap() {
         data: detailedRoadmap.data,
         skills: detailedRoadmap.data.nodes
           ? detailedRoadmap.data.nodes
-            .filter((node) => node.id !== "start")
-            .slice(0, 3)
-            .map((node) => node.title)
+              .filter((node) => node.id !== "start")
+              .slice(0, 3)
+              .map((node) => node.title)
           : [],
       };
 
@@ -387,6 +461,28 @@ export function Roadmap() {
                 <div className="bg-red-50 text-red-600 p-3 rounded-md flex items-center gap-2">
                   <AlertCircle className="h-5 w-5" />
                   <p className="text-sm">{error}</p>
+                </div>
+              )}
+              {emailStatus && (
+                <div
+                  className={`text-xs rounded-md p-2 border flex items-center gap-2 ${
+                    emailStatus.state === "sent"
+                      ? "bg-green-50 text-green-600 border-green-200"
+                      : emailStatus.state === "error"
+                      ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                      : "bg-blue-50 text-blue-600 border-blue-200"
+                  }`}
+                >
+                  {emailStatus.state === "sending" && (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  )}
+                  {emailStatus.state === "sent" && (
+                    <CheckCircle className="h-3 w-3" />
+                  )}
+                  {emailStatus.state === "error" && (
+                    <AlertCircle className="h-3 w-3" />
+                  )}
+                  <span>{emailStatus.message}</span>
                 </div>
               )}
 
@@ -641,7 +737,7 @@ export function Roadmap() {
                       <p className="text-xs xs:text-sm sm:text-base font-medium truncate">
                         {new Date(
                           new Date(selectedRoadmap.dateCreated).getTime() +
-                          selectedRoadmap.duration * 7 * 24 * 60 * 60 * 1000
+                            selectedRoadmap.duration * 7 * 24 * 60 * 60 * 1000
                         ).toLocaleDateString()}
                       </p>
                     </div>
@@ -666,12 +762,13 @@ export function Roadmap() {
                       <div className="flex gap-2 xs:gap-3 sm:gap-5">
                         {/* Step Icon */}
                         <div
-                          className={`flex-shrink-0 w-6 h-6 xs:w-8 xs:h-8 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-md z-[5] ${index === 0
-                            ? "bg-gradient-to-br from-green-400 to-green-600 text-white"
-                            : index === selectedRoadmap.data.nodes.length - 1
+                          className={`flex-shrink-0 w-6 h-6 xs:w-8 xs:h-8 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-md z-[5] ${
+                            index === 0
+                              ? "bg-gradient-to-br from-green-400 to-green-600 text-white"
+                              : index === selectedRoadmap.data.nodes.length - 1
                               ? "bg-gradient-to-br from-blue-400 to-indigo-600 text-white"
                               : "bg-gradient-to-br from-blue-300 to-blue-500 text-white"
-                            }`}
+                          }`}
                         >
                           {index === 0 ? (
                             <MapPin className="h-3 w-3 xs:h-3.5 xs:w-3.5 sm:h-5 sm:w-5" />
@@ -725,8 +822,8 @@ export function Roadmap() {
                                           {typeof resource === "string"
                                             ? resource
                                             : resource.name ||
-                                            resource.title ||
-                                            "Resource"}
+                                              resource.title ||
+                                              "Resource"}
                                         </span>
                                       </li>
                                     ))}

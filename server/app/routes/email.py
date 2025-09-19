@@ -1,7 +1,7 @@
 """Email sending API endpoints.
 
 POST /api/email/send
-  JSON body: {"to": "recipient@example.com", "subject": "...", "body": "..."}
+    JSON body: {"to": "recipient@example.com", "subject": "...", "body": "...", "html_body": "<p>...</p>"}
 
 Environment variables required:
   SENDER_EMAIL      -> Gmail address (or other SMTP account)
@@ -42,9 +42,12 @@ def _validate_payload(data: dict) -> Tuple[str, str, str]:
     return to_addr, subject, body
 
 
-def _build_email(sender: str, to_addr: str, subject: str, body: str) -> EmailMessage:
+def _build_email(sender: str, to_addr: str, subject: str, body: str, html_body: str | None = None) -> EmailMessage:
     msg = EmailMessage()
     msg.set_content(body)
+    if html_body:
+        # Provide HTML alternative part
+        msg.add_alternative(html_body, subtype="html")
     msg["Subject"] = subject
     msg["From"] = sender
     msg["To"] = to_addr
@@ -58,6 +61,7 @@ def send_email():  # pragma: no cover - network side effect
         to_addr, subject, body = _validate_payload(data)
     except ValueError as ve:
         return jsonify({"error": str(ve)}), 400
+    html_body = data.get("html_body") or None
 
     sender = os.getenv("SENDER_EMAIL", "").strip()
     password = os.getenv("SENDER_PASSWORD", "").strip()
@@ -69,7 +73,7 @@ def send_email():  # pragma: no cover - network side effect
             500,
         )
 
-    msg = _build_email(sender, to_addr, subject, body)
+    msg = _build_email(sender, to_addr, subject, body, html_body)
 
     # Use SMTP_SSL with context for security; Gmail requires app password if 2FA enabled.
     try:
