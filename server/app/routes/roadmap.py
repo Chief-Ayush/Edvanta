@@ -153,7 +153,7 @@ def generate_roadmap():
         }
 
         # Attempt DB save only if connection & collection name valid
-        if db and collection_name:
+        if db is not None and collection_name is not None:
             try:
                 roadmap_collection = db[collection_name]
                 roadmap_collection.insert_one(roadmap_document)
@@ -200,7 +200,7 @@ def get_user_roadmaps():
         return jsonify({"error": "Missing user_email parameter"}), 400
 
     try:
-        if db and collection_name:
+        if db is not None and collection_name is not None:
             roadmap_collection = db[collection_name]
             roadmaps_cursor = roadmap_collection.find({"user_email": user_email}).sort("created_at", -1)
             roadmaps = []
@@ -236,7 +236,7 @@ def get_roadmap_by_id(roadmap_id):
 
     try:
         # If DB is available, operate against MongoDB
-        if db and collection_name:
+        if db is not None and collection_name is not None:
             roadmap_collection = db[collection_name]
 
             # Check if roadmap exists and verify ownership
