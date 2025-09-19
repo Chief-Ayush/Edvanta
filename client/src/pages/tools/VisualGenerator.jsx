@@ -34,7 +34,6 @@ import {
 import backEndURL from "../../hooks/helper";
 import { useAuth } from "../../hooks/useAuth";
 import { db } from "../../lib/firebase";
-import { useEffect } from 'react'
 import {
   collection,
   addDoc,
@@ -384,9 +383,9 @@ export function VisualGenerator() {
               if (progress < 15) setProgress(15);
             }
           })
-          .catch(() => {});
+          .catch(() => { });
       }
-    } catch {}
+    } catch { }
   }, []);
 
   useEffect(() => {
@@ -447,7 +446,7 @@ export function VisualGenerator() {
     if (activeJob && progress > 0 && progress < 100) {
       try {
         localStorage.setItem("visual_active_job_progress", String(progress));
-      } catch {}
+      } catch { }
     }
   }, [progress, activeJob]);
 
