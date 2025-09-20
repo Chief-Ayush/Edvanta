@@ -7,7 +7,7 @@ const SCREEN_FATIGUE_TIPS = [
         title: "Follow the 20-20-20 Rule",
         description: "Every 20 minutes, look at something 20 feet away for at least 20 seconds to relax your eye muscles.",
         icon: Eye,
-        gradient: "from-primary via-blue-500 to-primary",
+        gradient: "from-blue-500 to-blue-600",
         iconBg: "bg-primary/20",
         accent: "primary"
     },
@@ -15,7 +15,7 @@ const SCREEN_FATIGUE_TIPS = [
         title: "Adjust Your Screen Brightness",
         description: "Match your screen brightness to your surroundings. Too bright or too dim can strain your eyes.",
         icon: Monitor,
-        gradient: "from-primary via-indigo-500 to-primary",
+        gradient: "from-indigo-500 to-indigo-600",
         iconBg: "bg-primary/20",
         accent: "primary"
     },
@@ -23,7 +23,7 @@ const SCREEN_FATIGUE_TIPS = [
         title: "Take Regular Breaks",
         description: "Stand up, stretch, and walk around for 5-10 minutes every hour to reduce eye strain and improve circulation.",
         icon: Clock,
-        gradient: "from-primary via-blue-600 to-primary",
+        gradient: "from-emerald-500 to-emerald-600",
         iconBg: "bg-primary/20",
         accent: "primary"
     },
@@ -31,7 +31,7 @@ const SCREEN_FATIGUE_TIPS = [
         title: "Blink More Frequently",
         description: "Remember to blink! When focused on screens, we blink less, causing dry eyes. Make conscious efforts to blink.",
         icon: Eye,
-        gradient: "from-primary via-cyan-500 to-primary",
+        gradient: "from-violet-500 to-violet-600",
         iconBg: "bg-primary/20",
         accent: "primary"
     },
@@ -39,7 +39,7 @@ const SCREEN_FATIGUE_TIPS = [
         title: "Optimize Your Workspace",
         description: "Position your screen 20-26 inches away, with the top at or below eye level to reduce neck strain.",
         icon: Monitor,
-        gradient: "from-primary via-blue-700 to-primary",
+        gradient: "from-teal-500 to-teal-600",
         iconBg: "bg-primary/20",
         accent: "primary"
     },
@@ -47,7 +47,7 @@ const SCREEN_FATIGUE_TIPS = [
         title: "Use Proper Lighting",
         description: "Avoid glare by positioning your screen perpendicular to windows and use ambient lighting to reduce contrast.",
         icon: Zap,
-        gradient: "from-primary via-violet-500 to-primary",
+        gradient: "from-amber-500 to-amber-600",
         iconBg: "bg-primary/20",
         accent: "primary"
     }
@@ -57,6 +57,7 @@ export function ScreenFatigueReminder() {
     const [isVisible, setIsVisible] = useState(false);
     const [currentTip, setCurrentTip] = useState(0);
     const [lastShown, setLastShown] = useState(null);
+    const [isTransitioning, setIsTransitioning] = useState(false);
 
     useEffect(() => {
         // Check if user has seen a reminder recently (within last 6 minutes)
@@ -80,6 +81,22 @@ export function ScreenFatigueReminder() {
 
         return () => clearTimeout(timer);
     }, []);
+
+    // Auto-cycle through tips every 10 seconds when visible
+    useEffect(() => {
+        if (!isVisible) return;
+
+        const interval = setInterval(() => {
+            setIsTransitioning(true);
+
+            setTimeout(() => {
+                setCurrentTip((prev) => (prev + 1) % SCREEN_FATIGUE_TIPS.length);
+                setIsTransitioning(false);
+            }, 150); // Half of transition duration
+        }, 10000); // 10 seconds
+
+        return () => clearInterval(interval);
+    }, [isVisible]);
 
     const showReminder = () => {
         // Select a random tip
@@ -117,7 +134,12 @@ export function ScreenFatigueReminder() {
     };
 
     const handleNextTip = () => {
-        setCurrentTip((prev) => (prev + 1) % SCREEN_FATIGUE_TIPS.length);
+        setIsTransitioning(true);
+
+        setTimeout(() => {
+            setCurrentTip((prev) => (prev + 1) % SCREEN_FATIGUE_TIPS.length);
+            setIsTransitioning(false);
+        }, 150);
     };
 
     if (!isVisible) return null;
@@ -132,7 +154,7 @@ export function ScreenFatigueReminder() {
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 opacity-50"></div>
 
                 {/* Header with modern gradient */}
-                <div className={`bg-gradient-to-br ${tip.gradient} p-8 text-white relative overflow-hidden`}>
+                <div className={`bg-gradient-to-br ${tip.gradient} p-8 text-white relative overflow-hidden transition-all duration-300 ease-in-out ${isTransitioning ? 'opacity-75 scale-95' : 'opacity-100 scale-100'}`}>
                     {/* Animated background elements */}
                     <div className="absolute -top-10 -right-10 w-20 h-20 bg-white/10 rounded-full blur-xl animate-pulse"></div>
                     <div className="absolute -bottom-5 -left-5 w-16 h-16 bg-white/5 rounded-full blur-lg animate-pulse delay-300"></div>
@@ -145,12 +167,9 @@ export function ScreenFatigueReminder() {
                     </button>
 
                     <div className="flex items-center gap-4 mb-2 relative z-10">
-                        <div className={`p-3 ${tip.iconBg} rounded-2xl backdrop-blur-sm border border-white/30 shadow-lg animate-bounce`}>
-                            <IconComponent className="h-7 w-7 text-white drop-shadow-sm" />
-                        </div>
                         <div className="flex-1">
-                            <h2 className="text-xl font-bold mb-1 tracking-tight">Screen Fatigue Reminder</h2>
-                            <p className="text-white/90 text-sm font-medium">✨ Time for a healthy break!</p>
+                            <h2 className="text-xl font-bold mb-1 tracking-tight text-white">Screen Fatigue Reminder</h2>
+                            <p className="text-white/90 text-sm font-medium">Time for a healthy break!</p>
                         </div>
                     </div>
                 </div>
@@ -158,20 +177,20 @@ export function ScreenFatigueReminder() {
                 {/* Content */}
                 <div className="p-8 relative z-10">
                     <div className="space-y-6">
-                        <div className="text-center space-y-3">
-                            <h3 className="text-2xl font-bold text-gray-900 tracking-tight animate-in slide-in-from-top duration-500 delay-200">
+                        <div className={`text-center space-y-3 transition-all duration-300 ease-in-out ${isTransitioning ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'}`}>
+                            <h3 className="text-2xl font-bold text-gray-900 tracking-tight">
                                 {tip.title}
                             </h3>
-                            <p className="text-gray-600 leading-relaxed text-base animate-in slide-in-from-top duration-500 delay-300">
+                            <p className="text-gray-600 leading-relaxed text-base">
                                 {tip.description}
                             </p>
                         </div>
 
                         {/* Action buttons */}
-                        <div className="space-y-4 animate-in slide-in-from-bottom duration-500 delay-400">
+                        <div className={`space-y-4 transition-all duration-300 ease-in-out ${isTransitioning ? 'opacity-75' : 'opacity-100'}`}>
                             <Button
                                 onClick={handleTakeBreak}
-                                className={`w-full bg-gradient-to-r ${tip.gradient} hover:scale-105 active:scale-95 text-white shadow-xl hover:shadow-2xl transition-all duration-300 h-14 text-lg font-semibold rounded-2xl border-0 relative overflow-hidden group`}
+                                className={`w-full bg-gradient-to-r ${tip.gradient} hover:scale-105 active:scale-95 text-white shadow-xl hover:shadow-2xl transition-all duration-300 h-14 text-lg font-semibold rounded-2xl border-0 relative overflow-hidden group cursor-pointer`}
                             >
                                 {/* Button shine effect */}
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
@@ -183,17 +202,15 @@ export function ScreenFatigueReminder() {
                                 <Button
                                     variant="outline"
                                     onClick={handleNextTip}
-                                    className="h-12 rounded-xl border-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5 hover:scale-105 transition-all duration-300 font-medium"
+                                    className="h-12 rounded-xl border-2 border-primary/20 hover:border-primary/40 hover:bg-primary/5 hover:scale-105 transition-all duration-300 font-bold cursor-pointer"
                                 >
-                                    <span className="mr-2">→</span>
                                     Next Tip
                                 </Button>
                                 <Button
                                     variant="ghost"
                                     onClick={handleClose}
-                                    className="h-12 rounded-xl hover:bg-gray-100 hover:scale-105 transition-all duration-300 font-medium"
+                                    className="h-12 rounded-xl hover:bg-gray-100 hover:scale-105 transition-all duration-300 font-bold cursor-pointer border-2 border-gray-200"
                                 >
-                                    <span className="mr-2">⏰</span>
                                     Later
                                 </Button>
                             </div>
