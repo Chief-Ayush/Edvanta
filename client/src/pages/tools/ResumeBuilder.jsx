@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useEffect } from 'react'
 import {
   Card,
   CardContent,
@@ -31,7 +30,6 @@ import {
   CheckCircle,
   Plus,
   Save,
-  Share,
   Sparkles,
   User,
   Briefcase,
@@ -54,7 +52,14 @@ export function ResumeBuilder() {
       location: "San Francisco, CA",
       website: "johndoe.dev",
     },
+    summary: "",
+    experience: [],
+    education: [],
+    skills: [],
+    projects: [],
   });
+  const [modal, setModal] = useState({ open: false, section: null, editIndex: -1 });
+  const [modalForm, setModalForm] = useState({});
   const [analyzeTab, setAnalyzeTab] = useState({
     file: null,
     text: "",
@@ -64,44 +69,6 @@ export function ResumeBuilder() {
   const [analyzeError, setAnalyzeError] = useState("");
   const [analyzeResult, setAnalyzeResult] = useState(null);
 
-  // Scroll to top when component mounts
-  useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-  }, []);
-
-  const templates = [
-    {
-      id: "modern",
-      name: "Modern Professional",
-      preview: "/api/placeholder/300/400",
-      description: "Clean and contemporary design",
-      category: "Professional",
-    },
-    {
-      id: "creative",
-      name: "Creative Designer",
-      preview: "/api/placeholder/300/400",
-      description: "Colorful and artistic layout",
-      category: "Creative",
-    },
-    {
-      id: "minimal",
-      name: "Minimal Classic",
-      preview: "/api/placeholder/300/400",
-      description: "Simple and elegant format",
-      category: "Classic",
-    },
-    {
-      id: "technical",
-      name: "Technical Expert",
-      preview: "/api/placeholder/300/400",
-      description: "Perfect for developers and engineers",
-      category: "Technical",
-    },
-  ];
 
   const sections = [
     { id: "personal", name: "Personal Info", icon: User, completed: true },
@@ -127,7 +94,7 @@ export function ResumeBuilder() {
     { id: "projects", name: "Projects", icon: Target, completed: false },
   ];
 
-  const atsScore = 85;
+  
 
   async function uploadResumeFile(file) {
     const form = new FormData();
@@ -184,6 +151,214 @@ export function ResumeBuilder() {
     }
   }
 
+  function openAddModal(section) {
+    setModal({ open: true, section, editIndex: -1 });
+    // default form shape per section
+    if (section === "experience")
+      setModalForm({ company: "", title: "", start: "", end: "", description: "" });
+    else if (section === "education")
+      setModalForm({ school: "", degree: "", start: "", end: "", description: "" });
+    else if (section === "skills") setModalForm({ name: "", level: "" });
+    else if (section === "projects")
+      setModalForm({ name: "", link: "", description: "" });
+    else setModalForm({});
+  }
+
+  function closeModal() {
+    setModal({ open: false, section: null, editIndex: -1 });
+    setModalForm({});
+  }
+
+  async function saveModal() {
+    const section = modal.section;
+    if (!section) return;
+    setResumeData((prev) => {
+      const copy = { ...prev };
+      if (modal.editIndex >= 0) {
+        // edit existing
+        copy[section] = [...(copy[section] || [])];
+        copy[section][modal.editIndex] = modalForm;
+      } else {
+        copy[section] = [...(copy[section] || []), modalForm];
+      }
+      return copy;
+    });
+    closeModal();
+
+    // If job description is present, auto-run analysis for updated resume
+    if (analyzeTab.job?.trim()) {
+      // assemble plain-text resume
+      const pieces = [];
+      const p = resumeData.personal || {};
+      pieces.push(`Name: ${p.name || ""}`);
+      if (p.email) pieces.push(`Email: ${p.email}`);
+      if (p.phone) pieces.push(`Phone: ${p.phone}`);
+      if (p.location) pieces.push(`Location: ${p.location}`);
+      if (p.website) pieces.push(`Website: ${p.website}`);
+
+      const updated = { ...resumeData };
+      // apply modal change locally for the payload
+      updated[section] = updated[section] || [];
+      if (modal.editIndex >= 0) {
+        updated[section] = [...updated[section]];
+        updated[section][modal.editIndex] = modalForm;
+      } else {
+        updated[section] = [...updated[section], modalForm];
+      }
+
+      if (updated.summary) {
+        pieces.push("Professional Summary:");
+        pieces.push(updated.summary);
+      }
+
+      if (updated.experience && updated.experience.length) {
+        pieces.push("Work Experience:");
+        updated.experience.forEach((e) => {
+          pieces.push(`- ${e.title || ""} | ${e.company || ""} | ${e.start || ""} - ${e.end || ""}`);
+          if (e.description) pieces.push(`  ${e.description}`);
+        });
+      }
+
+      if (updated.education && updated.education.length) {
+        pieces.push("Education:");
+        updated.education.forEach((ed) => {
+          pieces.push(`- ${ed.degree || ""} | ${ed.school || ""} | ${ed.start || ""} - ${ed.end || ""}`);
+          if (ed.description) pieces.push(`  ${ed.description}`);
+        });
+      }
+
+      if (updated.skills && updated.skills.length) {
+        pieces.push("Skills:");
+        pieces.push(updated.skills.map((s) => `${s.name}${s.level ? ` (${s.level})` : ""}`).join(", "));
+      }
+
+      if (updated.projects && updated.projects.length) {
+        pieces.push("Projects:");
+        updated.projects.forEach((pr) => {
+          pieces.push(`- ${pr.name || ""}${pr.link ? ` (${pr.link})` : ""}`);
+          if (pr.description) pieces.push(`  ${pr.description}`);
+        });
+      }
+
+      const resume_text = pieces.join("\n");
+      const payload = { resume_text, job_description: analyzeTab.job.trim() };
+
+      try {
+        setSubmitLoading(true);
+        const res = await fetch(`${backEndURL}/api/resume/analyze`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Analysis failed");
+
+        setAnalyzeResult(data.analysis || null);
+      } catch (e) {
+        setSubmitError(e.message);
+      } finally {
+        setSubmitLoading(false);
+      }
+    }
+  }
+
+  function deleteItem(section, index) {
+    setResumeData((prev) => {
+      const copy = { ...prev };
+      copy[section] = (copy[section] || []).filter((_, i) => i !== index);
+      return copy;
+    });
+  }
+
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  async function submitResume() {
+    setSubmitError("");
+    // minimal validation: name must exist
+    if (!resumeData.personal?.name?.trim()) {
+      setSubmitError("Full name is required in Personal Info");
+      return;
+    }
+
+    // If a job description is provided in the Analyze tab, call the analyze endpoint.
+    // Otherwise treat Builder submit as a local save (no analysis required).
+
+    // Build a simple plain-text resume from the structured data
+    const pieces = [];
+    const p = resumeData.personal || {};
+    pieces.push(`Name: ${p.name || ""}`);
+    if (p.email) pieces.push(`Email: ${p.email}`);
+    if (p.phone) pieces.push(`Phone: ${p.phone}`);
+    if (p.location) pieces.push(`Location: ${p.location}`);
+    if (p.website) pieces.push(`Website: ${p.website}`);
+
+    if (resumeData.experience && resumeData.experience.length) {
+      pieces.push("Work Experience:");
+      resumeData.experience.forEach((e) => {
+        pieces.push(`- ${e.title || ""} | ${e.company || ""} | ${e.start || ""} - ${e.end || ""}`);
+        if (e.description) pieces.push(`  ${e.description}`);
+      });
+    }
+
+    // Include professional summary if present
+    if (resumeData.summary && resumeData.summary.trim()) {
+      pieces.splice(1, 0, "Professional Summary:", resumeData.summary);
+    }
+
+    if (resumeData.education && resumeData.education.length) {
+      pieces.push("Education:");
+      resumeData.education.forEach((ed) => {
+        pieces.push(`- ${ed.degree || ""} | ${ed.school || ""} | ${ed.start || ""} - ${ed.end || ""}`);
+        if (ed.description) pieces.push(`  ${ed.description}`);
+      });
+    }
+
+    if (resumeData.skills && resumeData.skills.length) {
+      pieces.push("Skills:");
+      pieces.push(resumeData.skills.map((s) => `${s.name}${s.level ? ` (${s.level})` : ""}`).join(", "));
+    }
+
+    if (resumeData.projects && resumeData.projects.length) {
+      pieces.push("Projects:");
+      resumeData.projects.forEach((pr) => {
+        pieces.push(`- ${pr.name || ""}${pr.link ? ` (${pr.link})` : ""}`);
+        if (pr.description) pieces.push(`  ${pr.description}`);
+      });
+    }
+
+    const resume_text = pieces.join("\n");
+
+    if (analyzeTab.job?.trim()) {
+      const payload = {
+        resume_text,
+        job_description: analyzeTab.job.trim(),
+      };
+
+      try {
+        setSubmitLoading(true);
+        const res = await fetch(`${backEndURL}/api/resume/builder`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Analysis failed");
+
+        // show analysis result in the Analyze panel
+        setAnalyzeResult(data.analysis || null);
+      } catch (e) {
+        setSubmitError(e.message);
+      } finally {
+        setSubmitLoading(false);
+      }
+    } else {
+      // No job description provided: treat as local save. Clear any prior analysis errors.
+      setSubmitError("");
+      setAnalyzeResult(null);
+    }
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 lg:p-6">
       {/* Header */}
@@ -197,19 +372,9 @@ export function ResumeBuilder() {
       </div>
 
       <Tabs defaultValue="analyze" className="space-y-4 sm:space-y-6">
-        <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex gap-1">
-          <TabsTrigger value="analyze" className="text-xs sm:text-sm py-2">
-            Analyze
-          </TabsTrigger>
-          <TabsTrigger value="builder" className="text-xs sm:text-sm py-2">
-            Builder
-          </TabsTrigger>
-          <TabsTrigger value="templates" className="text-xs sm:text-sm py-2">
-            Templates
-          </TabsTrigger>
-          <TabsTrigger value="optimize" className="text-xs sm:text-sm py-2">
-            Optimize
-          </TabsTrigger>
+        <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:flex gap-1">
+          <TabsTrigger value="analyze" className="text-xs sm:text-sm py-2">Analyze</TabsTrigger>
+          <TabsTrigger value="builder" className="text-xs sm:text-sm py-2">Builder</TabsTrigger>
         </TabsList>
 
         <TabsContent value="analyze" className="space-y-4 sm:space-y-6">
@@ -347,11 +512,12 @@ export function ResumeBuilder() {
                           <circle
                             className="text-blue-600"
                             strokeWidth="8"
-                            strokeDasharray={`${Math.min(
-                              100,
-                              Math.max(0, analyzeResult.match_score ?? 0)
-                            ) * 2.76
-                              } 276`}
+                            strokeDasharray={`${
+                              Math.min(
+                                100,
+                                Math.max(0, analyzeResult.match_score ?? 0)
+                              ) * 2.76
+                            } 276`}
                             strokeLinecap="round"
                             stroke="currentColor"
                             fill="transparent"
@@ -402,10 +568,10 @@ export function ResumeBuilder() {
                       ))}
                       {(!analyzeResult.strengths ||
                         analyzeResult.strengths.length === 0) && (
-                          <p className="text-xs text-gray-500">
-                            No strengths identified.
-                          </p>
-                        )}
+                        <p className="text-xs text-gray-500">
+                          No strengths identified.
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="border rounded-lg p-4">
@@ -421,10 +587,10 @@ export function ResumeBuilder() {
                       ))}
                       {(!analyzeResult.improvements ||
                         analyzeResult.improvements.length === 0) && (
-                          <p className="text-xs text-gray-500">
-                            No improvement suggestions.
-                          </p>
-                        )}
+                        <p className="text-xs text-gray-500">
+                          No improvement suggestions.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -450,15 +616,17 @@ export function ResumeBuilder() {
                   {sections.map((section) => (
                     <div
                       key={section.id}
-                      className={`flex items-center p-3 rounded-lg cursor-pointer transition-all duration-200 ${activeSection === section.id
-                        ? "bg-blue-50 border border-blue-200"
-                        : "hover:bg-gray-50 border border-transparent"
-                        }`}
+                      className={`flex items-center p-3 rounded-lg cursor-pointer transition-all duration-200 ${
+                        activeSection === section.id
+                          ? "bg-blue-50 border border-blue-200"
+                          : "hover:bg-gray-50 border border-transparent"
+                      }`}
                       onClick={() => setActiveSection(section.id)}
                     >
                       <section.icon
-                        className={`h-4 w-4 mr-3 ${section.completed ? "text-green-600" : "text-gray-400"
-                          }`}
+                        className={`h-4 w-4 mr-3 ${
+                          section.completed ? "text-green-600" : "text-gray-400"
+                        }`}
                       />
                       <span className="flex-1 text-sm font-medium">
                         {section.name}
@@ -559,6 +727,10 @@ export function ResumeBuilder() {
                           <Input
                             type="email"
                             value={resumeData.personal.email}
+                            onChange={(e) => setResumeData((prev) => ({
+                              ...prev,
+                              personal: { ...prev.personal, email: e.target.value },
+                            }))}
                             className="pl-10 text-sm sm:text-base"
                           />
                         </div>
@@ -571,6 +743,10 @@ export function ResumeBuilder() {
                           <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
                             value={resumeData.personal.phone}
+                            onChange={(e) => setResumeData((prev) => ({
+                              ...prev,
+                              personal: { ...prev.personal, phone: e.target.value },
+                            }))}
                             className="pl-10 text-sm sm:text-base"
                           />
                         </div>
@@ -581,6 +757,10 @@ export function ResumeBuilder() {
                           <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
                             value={resumeData.personal.location}
+                            onChange={(e) => setResumeData((prev) => ({
+                              ...prev,
+                              personal: { ...prev.personal, location: e.target.value },
+                            }))}
                             className="pl-10 text-sm sm:text-base"
                           />
                         </div>
@@ -593,6 +773,10 @@ export function ResumeBuilder() {
                           <Globe className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
                             value={resumeData.personal.website}
+                            onChange={(e) => setResumeData((prev) => ({
+                              ...prev,
+                              personal: { ...prev.personal, website: e.target.value },
+                            }))}
                             className="pl-10 text-sm sm:text-base"
                           />
                         </div>
@@ -609,6 +793,8 @@ export function ResumeBuilder() {
                         <textarea
                           placeholder="Write a compelling summary of your professional experience and goals..."
                           className="w-full h-32 p-3 border rounded-lg text-sm sm:text-base resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          value={resumeData.summary}
+                          onChange={(e) => setResumeData((prev) => ({ ...prev, summary: e.target.value }))}
                         />
                       </div>
                       <Button
@@ -625,219 +811,242 @@ export function ResumeBuilder() {
                   {activeSection === "experience" && (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-base font-medium">
-                          Work Experience
-                        </h3>
-                        <Button size="sm" className="text-xs sm:text-sm">
+                        <h3 className="text-base font-medium">Work Experience</h3>
+                        <Button size="sm" className="text-xs sm:text-sm" onClick={() => openAddModal("experience")}>
                           <Plus className="h-4 w-4 mr-2" />
                           Add Experience
                         </Button>
                       </div>
-                      <div className="p-4 border rounded-lg bg-gray-50">
-                        <p className="text-sm text-gray-600 text-center">
-                          No work experience added yet. Click "Add Experience"
-                          to get started.
-                        </p>
+                      <div className="space-y-3">
+                        {(resumeData.experience || []).length === 0 && (
+                          <div className="p-4 border rounded-lg bg-gray-50">
+                            <p className="text-sm text-gray-600 text-center">
+                              No work experience added yet. Click "Add Experience" to get started.
+                            </p>
+                          </div>
+                        )}
+                        {(resumeData.experience || []).map((exp, i) => (
+                          <div key={i} className="p-3 border rounded-lg">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <div className="font-medium">{exp.title || "Title"} — {exp.company || "Company"}</div>
+                                <div className="text-xs text-gray-500">{exp.start} — {exp.end}</div>
+                                <div className="text-sm text-gray-700 mt-2">{exp.description}</div>
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                <Button size="sm" variant="outline" onClick={() => { setModal({ open: true, section: 'experience', editIndex: i }); setModalForm(exp); }}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => deleteItem('experience', i)}>
+                                  <Trash2 className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
 
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 pt-4 border-t">
-                    <Button className="flex-1 text-sm sm:text-base">
-                      <Save className="h-4 w-4 mr-2" />
-                      Save Section
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-1 text-sm sm:text-base"
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      Preview Resume
-                    </Button>
-                  </div>
+                  {activeSection === "education" && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-base font-medium">Education</h3>
+                        <Button size="sm" className="text-xs sm:text-sm" onClick={() => openAddModal("education")}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Education
+                        </Button>
+                      </div>
+                      <div className="space-y-3">
+                        {(resumeData.education || []).length === 0 && (
+                          <div className="p-4 border rounded-lg bg-gray-50">
+                            <p className="text-sm text-gray-600 text-center">No education added yet. Click "Add Education" to get started.</p>
+                          </div>
+                        )}
+                        {(resumeData.education || []).map((edu, i) => (
+                          <div key={i} className="p-3 border rounded-lg">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <div className="font-medium">{edu.degree || "Degree"} — {edu.school || "School"}</div>
+                                <div className="text-xs text-gray-500">{edu.start} — {edu.end}</div>
+                                <div className="text-sm text-gray-700 mt-2">{edu.description}</div>
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                <Button size="sm" variant="outline" onClick={() => { setModal({ open: true, section: 'education', editIndex: i }); setModalForm(edu); }}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => deleteItem('education', i)}>
+                                  <Trash2 className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {activeSection === "skills" && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-base font-medium">Skills</h3>
+                        <Button size="sm" className="text-xs sm:text-sm" onClick={() => openAddModal("skills")}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Skill
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        {(resumeData.skills || []).length === 0 && (
+                          <div className="p-4 border rounded-lg bg-gray-50">
+                            <p className="text-sm text-gray-600 text-center">No skills added yet. Click "Add Skill" to get started.</p>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {(resumeData.skills || []).map((s, i) => (
+                            <div key={i} className="flex items-center gap-2 p-2 bg-gray-100 rounded">
+                              <div className="text-sm">{s.name}</div>
+                              <div className="text-xs text-gray-500">{s.level}</div>
+                              <Button size="xs" variant="ghost" onClick={() => { setModal({ open: true, section: 'skills', editIndex: i }); setModalForm(s); }}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button size="xs" variant="ghost" onClick={() => deleteItem('skills', i)}>
+                                <Trash2 className="h-4 w-4 text-red-600" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeSection === "projects" && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-base font-medium">Projects</h3>
+                        <Button size="sm" className="text-xs sm:text-sm" onClick={() => openAddModal("projects")}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Project
+                        </Button>
+                      </div>
+                      <div className="space-y-3">
+                        {(resumeData.projects || []).length === 0 && (
+                          <div className="p-4 border rounded-lg bg-gray-50">
+                            <p className="text-sm text-gray-600 text-center">No projects added yet. Click "Add Project" to get started.</p>
+                          </div>
+                        )}
+                        {(resumeData.projects || []).map((p, i) => (
+                          <div key={i} className="p-3 border rounded-lg">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <div className="font-medium">{p.name || "Project"}</div>
+                                <div className="text-xs text-gray-500">{p.link}</div>
+                                <div className="text-sm text-gray-700 mt-2">{p.description}</div>
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                <Button size="sm" variant="outline" onClick={() => { setModal({ open: true, section: 'projects', editIndex: i }); setModalForm(p); }}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => deleteItem('projects', i)}>
+                                  <Trash2 className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  
                 </CardContent>
               </Card>
             </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="templates" className="space-y-4 sm:space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg sm:text-xl">
-                Choose Template
-              </CardTitle>
-              <CardDescription>
-                Select a professional template that matches your industry
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                {templates.map((template) => (
-                  <div
-                    key={template.id}
-                    className={`cursor-pointer group ${selectedTemplate === template.id
-                      ? "ring-2 ring-blue-500"
-                      : ""
-                      }`}
-                    onClick={() => setSelectedTemplate(template.id)}
-                  >
-                    <Card className="h-full hover:shadow-lg transition-shadow duration-200">
-                      <div className="aspect-[3/4] bg-gray-100 rounded-t-lg flex items-center justify-center">
-                        <FileText className="h-12 w-12 text-gray-400" />
-                      </div>
-                      <CardContent className="p-3 sm:p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-medium text-sm sm:text-base">
-                            {template.name}
-                          </h3>
-                          {selectedTemplate === template.id && (
-                            <CheckCircle className="h-4 w-4 text-blue-600" />
-                          )}
-                        </div>
-                        <p className="text-xs sm:text-sm text-gray-600 mb-2">
-                          {template.description}
-                        </p>
-                        <Badge variant="secondary" className="text-xs">
-                          {template.category}
-                        </Badge>
-                      </CardContent>
-                    </Card>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="optimize" className="space-y-4 sm:space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            {/* ATS Score */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                  <Award className="h-5 w-5" />
-                  ATS Score
-                </CardTitle>
-                <CardDescription>
-                  How well your resume performs with Applicant Tracking Systems
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center space-y-4">
-                  <div className="relative inline-flex">
-                    <svg className="w-20 h-20 sm:w-24 sm:h-24 transform -rotate-90">
-                      <circle
-                        className="text-gray-200"
-                        strokeWidth="6"
-                        stroke="currentColor"
-                        fill="transparent"
-                        r="34"
-                        cx="48"
-                        cy="48"
-                      />
-                      <circle
-                        className="text-green-500"
-                        strokeWidth="6"
-                        strokeDasharray={`${atsScore * 2.14} 214`}
-                        strokeLinecap="round"
-                        stroke="currentColor"
-                        fill="transparent"
-                        r="34"
-                        cx="48"
-                        cy="48"
-                      />
-                    </svg>
-                    <span className="absolute inset-0 flex items-center justify-center text-xl sm:text-2xl font-bold">
-                      {atsScore}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold text-green-600">
-                      Excellent
-                    </p>
-                    <p className="text-xs sm:text-sm text-gray-600">
-                      Your resume is highly optimized for ATS systems
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Optimization Tips */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg sm:text-xl">
-                  Optimization Tips
-                </CardTitle>
-                <CardDescription>
-                  Suggestions to improve your resume
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg">
-                  <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium">Good keyword usage</p>
-                    <p className="text-xs text-gray-600">
-                      Your resume includes relevant industry keywords
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg">
-                  <TrendingUp className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium">
-                      Add more quantifiable achievements
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      Include numbers and metrics in your experience
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-                  <Target className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium">
-                      Tailor for specific roles
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      Customize your resume for each job application
-                    </p>
-                  </div>
-                </div>
-
-                <Button className="w-full text-sm sm:text-base">
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Auto-Optimize Resume
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+        
       </Tabs>
 
       {/* Action Bar */}
       <Card>
         <CardContent className="pt-6">
+          {submitError && (
+            <div className="mb-3 p-2 text-sm text-red-700 bg-red-100 rounded">
+              {submitError}
+            </div>
+          )}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
             <Button className="flex-1 text-sm sm:text-base">
               <Download className="h-4 w-4 mr-2" />
               Download PDF
             </Button>
-            <Button variant="outline" className="flex-1 text-sm sm:text-base">
-              <Share className="h-4 w-4 mr-2" />
-              Share Resume
-            </Button>
+            
             <Button variant="outline" className="flex-1 text-sm sm:text-base">
               <Eye className="h-4 w-4 mr-2" />
               Preview
             </Button>
+            <Button
+              className="flex-1 text-sm sm:text-base bg-blue-600 text-white"
+              onClick={submitResume}
+              disabled={submitLoading}
+            >
+              {submitLoading ? 'Submitting...' : 'Submit Resume'}
+            </Button>
           </div>
         </CardContent>
       </Card>
+      {/* Modal Overlay */}
+      {modal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black opacity-40" onClick={closeModal} />
+          <div className="relative bg-white w-11/12 max-w-2xl rounded-lg p-4 shadow-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-medium">{modal.editIndex >= 0 ? 'Edit' : 'Add'} {modal.section}</h3>
+              <Button size="sm" variant="ghost" onClick={closeModal}>Close</Button>
+            </div>
+            <div className="space-y-3">
+              {modal.section === 'experience' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Input placeholder="Job Title" value={modalForm.title || ''} onChange={(e) => setModalForm({...modalForm, title: e.target.value})} />
+                  <Input placeholder="Company" value={modalForm.company || ''} onChange={(e) => setModalForm({...modalForm, company: e.target.value})} />
+                  <Input placeholder="Start (e.g. 2020)" value={modalForm.start || ''} onChange={(e) => setModalForm({...modalForm, start: e.target.value})} />
+                  <Input placeholder="End (e.g. 2022 or Present)" value={modalForm.end || ''} onChange={(e) => setModalForm({...modalForm, end: e.target.value})} />
+                  <textarea className="col-span-1 sm:col-span-2 p-2 border rounded" placeholder="Description" value={modalForm.description || ''} onChange={(e) => setModalForm({...modalForm, description: e.target.value})} />
+                </div>
+              )}
+
+              {modal.section === 'education' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Input placeholder="School" value={modalForm.school || ''} onChange={(e) => setModalForm({...modalForm, school: e.target.value})} />
+                  <Input placeholder="Degree" value={modalForm.degree || ''} onChange={(e) => setModalForm({...modalForm, degree: e.target.value})} />
+                  <Input placeholder="Start" value={modalForm.start || ''} onChange={(e) => setModalForm({...modalForm, start: e.target.value})} />
+                  <Input placeholder="End" value={modalForm.end || ''} onChange={(e) => setModalForm({...modalForm, end: e.target.value})} />
+                  <textarea className="col-span-1 sm:col-span-2 p-2 border rounded" placeholder="Description" value={modalForm.description || ''} onChange={(e) => setModalForm({...modalForm, description: e.target.value})} />
+                </div>
+              )}
+
+              {modal.section === 'skills' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Input placeholder="Skill name" value={modalForm.name || ''} onChange={(e) => setModalForm({...modalForm, name: e.target.value})} />
+                  <Input placeholder="Level (e.g. Expert)" value={modalForm.level || ''} onChange={(e) => setModalForm({...modalForm, level: e.target.value})} />
+                </div>
+              )}
+
+              {modal.section === 'projects' && (
+                <div className="grid grid-cols-1 gap-2">
+                  <Input placeholder="Project name" value={modalForm.name || ''} onChange={(e) => setModalForm({...modalForm, name: e.target.value})} />
+                  <Input placeholder="Link" value={modalForm.link || ''} onChange={(e) => setModalForm({...modalForm, link: e.target.value})} />
+                  <textarea className="p-2 border rounded" placeholder="Description" value={modalForm.description || ''} onChange={(e) => setModalForm({...modalForm, description: e.target.value})} />
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={closeModal}>Cancel</Button>
+              <Button onClick={saveModal}>{modal.editIndex >= 0 ? 'Save' : 'Add'}</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
