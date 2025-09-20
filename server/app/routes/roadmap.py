@@ -3,7 +3,7 @@
 Generates a learning roadmap with milestones, resources, and estimated durations.
 Stores and retrieves roadmaps from MongoDB.
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 import os
 import json
 import base64
@@ -279,3 +279,125 @@ def get_roadmap_by_id(roadmap_id):
 
     except Exception as e:
         return jsonify({"error": f"Operation failed: {str(e)}"}), 500
+
+
+@roadmap_bp.route("/api/roadmap/download/<roadmap_id>", methods=["GET"])
+def download_roadmap(roadmap_id):
+    """Download a roadmap as PDF.
+
+    Query params:
+    - user_email: The email of the user requesting the roadmap
+    """
+    # Check if MongoDB is available
+    global client, db, collection_name
+    if db is None:
+        client, db, collection_name = connect_to_mongodb()
+
+    user_email = request.args.get("user_email")
+    if not user_email:
+        return jsonify({"error": "Missing user_email parameter"}), 400
+
+    try:
+        # Fetch roadmap
+        if db is not None and collection_name is not None:
+            roadmap_collection = db[collection_name]
+            roadmap = roadmap_collection.find_one(
+                {"id": roadmap_id, "user_email": user_email})
+            if not roadmap:
+                return jsonify({"error": "Roadmap not found or access denied"}), 404
+        else:
+            # Fallback to in-memory
+            roadmap = _in_memory_roadmaps.get(roadmap_id)
+            if not roadmap or roadmap.get("user_email") != user_email:
+                return jsonify({"error": "Roadmap not found or access denied"}), 404
+
+        # Generate PDF using reportlab
+        from reportlab.lib.pagesizes import A4
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, ListFlowable, ListItem
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_LEFT
+        from reportlab.lib.units import mm
+        from reportlab.lib import colors
+        import io
+
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buf,
+            pagesize=A4,
+            leftMargin=18 * mm,
+            rightMargin=18 * mm,
+            topMargin=18 * mm,
+            bottomMargin=18 * mm,
+            title=f"Roadmap: {roadmap['title']}",
+        )
+
+        styles = getSampleStyleSheet()
+        h1 = ParagraphStyle("Title", parent=styles["Heading1"], fontSize=18, leading=22, spaceAfter=6)
+        h2 = ParagraphStyle("Section", parent=styles["Heading2"], fontSize=13, spaceBefore=12, spaceAfter=6)
+        normal = styles["BodyText"]
+        bullet_style = ParagraphStyle("Bullet", parent=styles["BodyText"], bulletIndent=10, leftIndent=12)
+
+        story = []
+        # Header
+        story.append(Paragraph(f"Roadmap: {roadmap['title']}", h1))
+        story.append(Spacer(1, 6))
+
+        # Description
+        story.append(Paragraph(roadmap['description'], normal))
+        story.append(Spacer(1, 12))
+
+        # Duration
+        if roadmap.get('duration_weeks'):
+            story.append(Paragraph(f"Target Duration: {roadmap['duration_weeks']} weeks", normal))
+            story.append(Spacer(1, 6))
+
+        # Created date
+        if roadmap.get('created_at'):
+            created_date = roadmap['created_at']
+            if isinstance(created_date, datetime):
+                created_str = created_date.strftime("%Y-%m-%d")
+            else:
+                created_str = str(created_date)
+            story.append(Paragraph(f"Created: {created_str}", normal))
+            story.append(Spacer(1, 12))
+
+        # Nodes
+        story.append(Paragraph("Learning Path:", h2))
+        story.append(Spacer(1, 6))
+
+        nodes = roadmap['data'].get('nodes', [])
+        for i, node in enumerate(nodes, 1):
+            story.append(Paragraph(f"{i}. {node['title']}", h2))
+            story.append(Paragraph(node['description'], normal))
+            if node.get('recommended_weeks'):
+                story.append(Paragraph(f"Recommended weeks: {node['recommended_weeks']}", normal))
+            if node.get('resources') and node['resources']:
+                story.append(Paragraph("Resources:", normal))
+                bullets = [ListItem(Paragraph(str(r), normal)) for r in node['resources']]
+                story.append(ListFlowable(bullets, bulletType="bullet", leftIndent=12))
+            story.append(Spacer(1, 12))
+
+        # Edges (dependencies)
+        edges = roadmap['data'].get('edges', [])
+        if edges:
+            story.append(Paragraph("Skill Dependencies:", h2))
+            story.append(Spacer(1, 6))
+            for edge in edges:
+                from_node = next((n for n in nodes if n['id'] == edge['from']), None)
+                to_node = next((n for n in nodes if n['id'] == edge['to']), None)
+                if from_node and to_node:
+                    story.append(Paragraph(f"{from_node['title']} → {to_node['title']}", normal))
+            story.append(Spacer(1, 12))
+
+        doc.build(story)
+        buf.seek(0)
+
+        return send_file(
+            buf,
+            as_attachment=True,
+            download_name=f"roadmap_{roadmap_id}.pdf",
+            mimetype='application/pdf'
+        )
+
+    except Exception as e:
+        return jsonify({"error": f"Download failed: {str(e)}"}), 500

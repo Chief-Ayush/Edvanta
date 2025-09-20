@@ -363,6 +363,35 @@ export function Roadmap() {
     return totalWeeks ? `${totalWeeks} weeks` : "N/A";
   };
 
+  // Function to download roadmap as PDF
+  const downloadRoadmap = async () => {
+    if (!selectedRoadmap || !user?.email) return;
+
+    try {
+      const response = await fetch(
+        `${backEndURL}/api/roadmap/download/${selectedRoadmap.id}?user_email=${user.email}`
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Download failed");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `roadmap_${selectedRoadmap.id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading roadmap:", error);
+      alert("Failed to download roadmap. Please try again.");
+    }
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 lg:p-6">
       {/* Header */}
@@ -888,13 +917,10 @@ export function Roadmap() {
               <div className="flex gap-3 flex-col sm:flex-row">
                 <Button
                   className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-xs xs:text-sm py-2 px-3 xs:px-4"
-                  onClick={() => {
-                    setShowRoadmapModal(false);
-                    // Could add more actions here like printing, sharing, etc.
-                  }}
+                  onClick={downloadRoadmap}
                 >
                   <FileText className="h-3 w-3 xs:h-3.5 xs:w-3.5 sm:h-4 sm:w-4 mr-1.5 xs:mr-2" />
-                  Export PDF (Coming Soon)
+                  Download PDF
                 </Button>
                 <Button
                   variant="outline"
