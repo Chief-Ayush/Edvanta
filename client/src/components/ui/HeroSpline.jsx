@@ -17,7 +17,7 @@ export default function HeroSpline() {
       </div>
 
       {/* Robot container (behind text) */}
-      <div className="relative z-10 w-full flex justify-end">
+      <div className="relative z-10 w-full flex justify-end bg-blue-100">
         <div className="w-[150vw] max-w-none h-[320px] md:h-[500px] lg:h-[600px] -mr-[50vw] -ml-[20vw]">
           <iframe
             src="https://my.spline.design/nexbotrobotcharacterconcept-pEKDoPk1s0o4YIz9NCio81XB/"

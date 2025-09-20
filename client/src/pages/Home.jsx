@@ -101,7 +101,7 @@ function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section with 3D Robot (lazy loaded) */}
-      <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading 3D Experience...</div>}>
+      <Suspense fallback={<div className="h-64 items-center justify-center flex">Loading 3D Experience...</div>}>
         <HeroSpline />
       </Suspense>
 
