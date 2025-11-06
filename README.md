@@ -156,7 +156,7 @@ All endpoints currently return JSON with a basic placeholder `message`. Logic wi
 
 ## Contributors
 
-| [![](https://github.com/parthnarkar.png?size=100)](https://github.com/parthnarkar) | [![](https://github.com/tanish-jain-225.png?size=100)](https://github.com/tanish-jain-225) | [![](https://github.com/pankaj0695.png?size=100)](https://github.com/pankaj0695) | [![](https://github.com/Chief-Ayush.png?size=100)](https://github.com/Chief-Ayush) |
+| [![](https://github.com/parthnarkar.png?size=500)](https://github.com/parthnarkar) | [![](https://github.com/tanish-jain-225.png?size=500)](https://github.com/tanish-jain-225) | [![](https://github.com/pankaj0695.png?size=500)](https://github.com/pankaj0695) | [![](https://github.com/Chief-Ayush.png?size=500)](https://github.com/Chief-Ayush) |
 | :--------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------: |
 |                 [**Parth Narkar**](https://github.com/parthnarkar)                 |                  [**Tanish Sanghvi**](https://github.com/tanish-jain-225)                  |                [**Pankaj Gupta**](https://github.com/pankaj0695)                 |                [**Ayush Attarde**](https://github.com/Chief-Ayush)                 |
 
